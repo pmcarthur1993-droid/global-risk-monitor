@@ -476,7 +476,11 @@ var done=false,timer=setTimeout(function(){if(!done)fail("The data store could n
 (async function(){
   try{
     var db=(window.claude&&window.claude.use)?await window.claude.use("db"):null;
-    if(!db){var r=await fetch("data.json",{cache:"no-store"});if(!r.ok)throw new Error("no data");var J=await r.json();
+    if(!db){var gj=function(u){return fetch(u,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error(u);return r.json()})},J;
+      try{var st=await gj("static.json"),ix=await gj("runs/index.json");var ids=(ix.runs||ix).slice(0,60);
+        var rr=await Promise.all(ids.map(function(i){return gj("runs/"+i+".json").catch(function(){return null})}));rr=rr.filter(Boolean).sort(function(a,b){return a.ts<b.ts?1:-1});
+        J={cfg:st.cfg,hist:st.hist,stories:st.stories,extra:st.extra,cal:st.cal,outlook:st.outlook,runs:rr,exported:rr.length?rr[0].ts:st.exported}}
+      catch(e1){J=await gj("data.json")}
       S.cfg=J.cfg||{indicators:[]};S.hist=J.hist||{};S.runs=J.runs||[];S.stories=(J.stories||[]).sort(function(a,b){return(a.order||99)-(b.order||99)});
       S.out=(J.outlook&&J.outlook.computed>OUT0.computed)?J.outlook:OUT0;S.ex=J.extra||{};S.cal=J.cal||null;S.pub=J.exported||"";S.apiOK=false;done=true;clearTimeout(timer);render();return}
     var res=await Promise.all([db.doc("meta/config").get(),db.collection("history").limit(200).get(),db.collection("runs").orderBy("ts","desc").limit(240).get(),db.collection("stories").limit(100).get(),db.doc("risk/outlook").get(),db.doc("meta/extra").get(),db.doc("meta/calendar").get()]);
